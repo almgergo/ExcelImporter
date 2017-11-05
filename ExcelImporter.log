@@ -1,0 +1,16 @@
+Aug 03, 2017 12:39:21 AM core.ExcelImporter processWorkbook
+INFO: Started processing E:\GIT\java\ExcelImporter\test\gáltamásgomboserzsigreplizoltán (1).xlsx
+Aug 03, 2017 12:39:21 AM core.ExcelImporter processWorkbooks
+SEVERE: Error processing gáltamásgomboserzsigreplizoltán (1).xlsx, For input string: " "
+java.lang.NumberFormatException: For input string: " "
+	at java.lang.NumberFormatException.forInputString(NumberFormatException.java:65)
+	at java.lang.Integer.parseInt(Integer.java:569)
+	at java.lang.Integer.parseInt(Integer.java:615)
+	at core.ExcelImporter.getTimeParts(ExcelImporter.java:389)
+	at core.ExcelImporter.getDatesFromString(ExcelImporter.java:356)
+	at core.ExcelImporter.loadWorkedDays(ExcelImporter.java:303)
+	at core.ExcelImporter.processWorkbook(ExcelImporter.java:245)
+	at core.ExcelImporter.processWorkbooks(ExcelImporter.java:201)
+	at core.ExcelImporter.run(ExcelImporter.java:468)
+	at java.lang.Thread.run(Thread.java:745)
+
