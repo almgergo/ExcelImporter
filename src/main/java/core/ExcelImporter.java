@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.DateFormatSymbols;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -30,20 +31,25 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import com.toedter.calendar.JMonthChooser;
+
 import model.Person;
 import model.WorkedDay;
 
 public class ExcelImporter implements Runnable {
 	private static ExcelImporter excelImporter;
+
 	private static final String CHOOSE_DIRECTORY = "Mappa választása";
 	private static final String NO_DIRECTORY_CHOSEN = "Válassza ki az .xlsx-eket tartalmazó mappát";
 	private static final String NO_OUT_DIRECTORY_CHOSEN = "Válassza ki a kész fájl mentésének helyét";
 	private static final String PROCESSING = "Adatok feldolgozás alatt...";
 	private static final String FINISHED = "<font color='green'>Feldolgozás befejezve</font>";
 	private static final String GENERATED_FILE_NAME = "\\Kiszámolt Bérpótlékok.xlsx";
+	private static final String logFileName = "\\ExcelImporter.log";
 	private static final int START_ROW = 5;
 	private static final int FIRST_HOUR = 18;
 	private static final int FINAL_HOUR = 6;
+
 	private JButton startCalc = new JButton("Adatok feldolgozása");
 	private JButton selectDir = new JButton("Mappa kiválasztása");
 	private JButton selectOutDir = new JButton("Kimeneti mappa kiválasztása");
@@ -52,13 +58,19 @@ public class ExcelImporter implements Runnable {
 	private JLabel outLabel;
 	private JLabel resultLabel;
 	private JFileChooser chooser;
+	// private JXDatePicker picker;
 	private File dir;
+	private JMonthChooser monthChooser;
 	private File outDir = new File(System.getProperty("user.dir"));
 	private String handlerPath = System.getProperty("user.dir") + "\\ExcelImporter.log";
-	private static final String logFileName = "\\ExcelImporter.log";
 	private static Logger logger = Logger.getLogger("ExcelImporter");
 	private static FileHandler handler;
 	protected List<NameCoordinate> nameCoords;
+	protected int calculationMonth;
+
+	public String getMonth(int month) {
+		return new DateFormatSymbols().getMonths()[month];
+	}
 
 	public static ExcelImporter getInstance() throws Exception {
 		if (excelImporter == null) {
@@ -72,17 +84,23 @@ public class ExcelImporter implements Runnable {
 		this.frame.setDefaultCloseOperation(3);
 
 		this.frame.setPreferredSize(new Dimension(800, 200));
-		this.frame.pack();
+
 		this.frame.setVisible(true);
 
-		GridLayout layout = new GridLayout(3, 3);
+		GridLayout layout = new GridLayout(4, 3);
 		this.frame.setLayout(layout);
 
 		this.label = new JLabel("Válassza ki az .xlsx-eket tartalmazó mappát");
-		this.frame.add(this.label);
+		this.frame.add(this.label, 0, 0);
 
 		this.outLabel = new JLabel("Válassza ki a kész fájl mentésének helyét");
-		this.frame.add(this.outLabel);
+		this.frame.add(this.outLabel, 0, 1);
+
+		monthChooser = new JMonthChooser();
+		Calendar c = Calendar.getInstance();
+		c.add(Calendar.MONTH, -1);
+		monthChooser.setMonth(c.get(Calendar.MONTH));
+		frame.add(monthChooser, 0, 2);
 
 		this.selectDir.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -100,7 +118,8 @@ public class ExcelImporter implements Runnable {
 				}
 			}
 		});
-		this.frame.add(this.selectDir);
+		this.dir = new File(System.getProperty("user.dir"));
+		this.frame.add(this.selectDir, 1, 0);
 
 		this.selectOutDir.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -113,6 +132,7 @@ public class ExcelImporter implements Runnable {
 				if (ExcelImporter.this.chooser.showOpenDialog(ExcelImporter.this.frame) == 0) {
 					if (ExcelImporter.this.chooser.getSelectedFile().isDirectory()) {
 						ExcelImporter.this.outDir = ExcelImporter.this.chooser.getSelectedFile();
+						ExcelImporter.this.outLabel.setText(ExcelImporter.this.chooser.getSelectedFile().toString());
 					} else {
 						ExcelImporter.this.outDir = ExcelImporter.this.chooser.getCurrentDirectory();
 						ExcelImporter.this.outLabel.setText(ExcelImporter.this.chooser.getSelectedFile().toString());
@@ -127,12 +147,13 @@ public class ExcelImporter implements Runnable {
 				}
 			}
 		});
-		this.frame.add(this.selectOutDir);
+		this.frame.add(this.selectOutDir, 1, 1);
 
 		this.startCalc.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				try {
 					ExcelImporter.this.startCalc.setEnabled(false);
+					ExcelImporter.this.calculationMonth = monthChooser.getMonth();
 					new Thread(ExcelImporter.getInstance()).start();
 				} catch (Exception e) {
 					ExcelImporter.this.resultLabel
@@ -140,10 +161,12 @@ public class ExcelImporter implements Runnable {
 				}
 			}
 		});
-		this.frame.add(this.startCalc);
+		this.frame.add(this.startCalc, 2, 0);
 
 		this.resultLabel = new JLabel("");
-		this.frame.add(this.resultLabel);
+		this.frame.add(this.resultLabel, 2, 1);
+
+		this.frame.pack();
 	}
 
 	public void processWorkbooks(File dir) throws IOException {
@@ -276,8 +299,9 @@ public class ExcelImporter implements Runnable {
 		Integer day = (int) mainSheet.getRow(row).getCell(0).getNumericCellValue();
 
 		Calendar c = Calendar.getInstance();
+		c.set(Calendar.MONTH, calculationMonth);
 		c.set(Calendar.DAY_OF_MONTH, day);
-		c.add(Calendar.MONTH, -1);
+		// c.add(Calendar.MONTH, -1);
 
 		Date date = c.getTime();
 		while (date != null) {
