@@ -20,6 +20,7 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -33,7 +34,9 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import com.toedter.calendar.JMonthChooser;
 
+import model.NameCoordinate;
 import model.Person;
+import model.TimeParts;
 import model.WorkedDay;
 
 public class ExcelImporter implements Runnable {
@@ -57,6 +60,7 @@ public class ExcelImporter implements Runnable {
 	private JLabel label;
 	private JLabel outLabel;
 	private JLabel resultLabel;
+	private JComboBox<ProcessMode> modeCombo;
 	private JFileChooser chooser;
 	// private JXDatePicker picker;
 	private File dir;
@@ -67,6 +71,8 @@ public class ExcelImporter implements Runnable {
 	private static FileHandler handler;
 	protected List<NameCoordinate> nameCoords;
 	protected int calculationMonth;
+
+	protected ProcessMode mode;
 
 	public String getMonth(int month) {
 		return new DateFormatSymbols().getMonths()[month];
@@ -83,24 +89,21 @@ public class ExcelImporter implements Runnable {
 		this.frame = new JFrame("Bérpótlék számolás");
 		this.frame.setDefaultCloseOperation(3);
 
-		this.frame.setPreferredSize(new Dimension(800, 200));
+		this.frame.setPreferredSize(new Dimension(800, 300));
 
 		this.frame.setVisible(true);
 
-		GridLayout layout = new GridLayout(4, 3);
+		GridLayout layout = new GridLayout(4, 4);
 		this.frame.setLayout(layout);
 
 		this.label = new JLabel("Válassza ki az .xlsx-eket tartalmazó mappát");
-		this.frame.add(this.label, 0, 0);
 
 		this.outLabel = new JLabel("Válassza ki a kész fájl mentésének helyét");
-		this.frame.add(this.outLabel, 0, 1);
 
 		monthChooser = new JMonthChooser();
 		Calendar c = Calendar.getInstance();
 		c.add(Calendar.MONTH, -1);
 		monthChooser.setMonth(c.get(Calendar.MONTH));
-		frame.add(monthChooser, 0, 2);
 
 		this.selectDir.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -119,7 +122,6 @@ public class ExcelImporter implements Runnable {
 			}
 		});
 		this.dir = new File(System.getProperty("user.dir"));
-		this.frame.add(this.selectDir, 1, 0);
 
 		this.selectOutDir.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -147,7 +149,6 @@ public class ExcelImporter implements Runnable {
 				}
 			}
 		});
-		this.frame.add(this.selectOutDir, 1, 1);
 
 		this.startCalc.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
@@ -161,10 +162,19 @@ public class ExcelImporter implements Runnable {
 				}
 			}
 		});
-		this.frame.add(this.startCalc, 2, 0);
 
 		this.resultLabel = new JLabel("");
-		this.frame.add(this.resultLabel, 2, 1);
+
+		this.modeCombo = new JComboBox<ProcessMode>(ProcessMode.values());
+
+		this.frame.add(this.label);
+		this.frame.add(this.outLabel);
+		this.frame.add(this.selectDir);
+		this.frame.add(this.selectOutDir);
+		this.frame.add(this.startCalc);
+		this.frame.add(this.resultLabel);
+		this.frame.add(this.monthChooser);
+		this.frame.add(this.modeCombo);
 
 		this.frame.pack();
 	}
@@ -194,7 +204,14 @@ public class ExcelImporter implements Runnable {
 				if ((!child.isDirectory()) && ("xlsx".equals(FilenameUtils.getExtension(child.toString())))
 						&& (!child.toString().contains("\\Kiszámolt Bérpótlékok.xlsx"))) {
 					try {
-						processWorkbook(child.getPath(), workSheet);
+						switch ((ProcessMode) modeCombo.getSelectedItem()) {
+						case MUSZAKPOTLEK:
+							processWorkbook(child.getPath(), workSheet);
+							break;
+						case EJSZAKAIESMUSZAKPOTLEK:
+							new NightAndWorkProcessor(calculationMonth).processWorkbook(child.getPath(), workSheet);
+						}
+
 					} catch (Exception e) {
 						finalMessage
 								.append("<font color='red'>Hiba a " + child + " fájl feldolgozása során.</font><br> ");
@@ -276,7 +293,7 @@ public class ExcelImporter implements Runnable {
 
 	protected void checkEligibility(List<Person> people) {
 		for (Person person : people) {
-			person.checkEligibility();
+			person.checkEligibilityForWorkSupport();
 		}
 	}
 
@@ -309,8 +326,8 @@ public class ExcelImporter implements Runnable {
 			int startColumn = person.getStartColumn();
 			int endColumn = person.getEndColumn();
 
-			String startHour = readUnkownCell(mainSheet, row, startColumn);
-			String endHour = readUnkownCell(mainSheet, row, endColumn);
+			String startHour = Helper.readUnkownCell(mainSheet, row, startColumn);
+			String endHour = Helper.readUnkownCell(mainSheet, row, endColumn);
 			if ((!"0.0".equals(startHour)) || (!"0.0".equals(endHour))) {
 				WorkedDay newDay = getDatesFromString(startHour, endHour);
 				newDay.setDay(date);
@@ -332,34 +349,15 @@ public class ExcelImporter implements Runnable {
 		}
 	}
 
-	protected String readUnkownCell(XSSFSheet mainSheet, int row, int col) throws Exception {
-		try {
-			return Double.toString(mainSheet.getRow(row).getCell(col).getNumericCellValue());
-		} catch (IllegalStateException localIllegalStateException) {
-			try {
-				return mainSheet.getRow(row).getCell(col).getStringCellValue();
-			} catch (IllegalStateException localIllegalStateException1) {
-				throw new Exception("Cell was not either numeric or String");
-			}
-		}
-	}
-
-	protected void trunk(Calendar time) {
-		time.set(11, 0);
-		time.set(12, 0);
-		time.set(13, 0);
-		time.set(14, 0);
-	}
-
 	public WorkedDay getDatesFromString(String startHour, String endHour) {
 		Calendar startTime = Calendar.getInstance();
 		Calendar endTime = Calendar.getInstance();
 
-		trunk(startTime);
-		trunk(endTime);
+		Helper.trunk(startTime);
+		Helper.trunk(endTime);
 
-		TimeParts startParts = getTimeParts(startHour);
-		TimeParts endParts = getTimeParts(endHour);
+		TimeParts startParts = Helper.getTimeParts(startHour);
+		TimeParts endParts = Helper.getTimeParts(endHour);
 		if (startParts.getHours() >= endParts.getHours()) {
 			endTime.add(5, 1);
 		}
@@ -377,73 +375,6 @@ public class ExcelImporter implements Runnable {
 		time.set(12, minutes);
 	}
 
-	protected TimeParts getTimeParts(String hour) {
-		String[] parts = hour.split("[.]");
-		if (0 == parts.length) {
-			parts = hour.split("[:]");
-		} else if (0 == parts.length) {
-			parts = hour.split("[,]");
-		} else if (0 == parts.length) {
-			parts = hour.split(" ");
-		}
-		if (parts.length > 1) {
-			return new TimeParts(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
-		}
-		return new TimeParts(Integer.parseInt(parts[0]), 0);
-	}
-
-	public class TimeParts {
-		private int hours;
-		private int minutes;
-
-		public TimeParts(int h, int m) {
-			this.hours = h;
-			this.minutes = m;
-		}
-
-		public int getHours() {
-			return this.hours;
-		}
-
-		public void setHours(int hours) {
-			this.hours = hours;
-		}
-
-		public int getMinutes() {
-			return this.minutes;
-		}
-
-		public void setMinutes(int minutes) {
-			this.minutes = minutes;
-		}
-	}
-
-	public class NameCoordinate {
-		protected int row;
-		protected int col;
-
-		public NameCoordinate(int row, int col) {
-			this.row = row;
-			this.col = col;
-		}
-
-		public int getRow() {
-			return this.row;
-		}
-
-		public void setRow(int row) {
-			this.row = row;
-		}
-
-		public int getCol() {
-			return this.col;
-		}
-
-		public void setCol(int col) {
-			this.col = col;
-		}
-	}
-
 	public static void addHeaderToSheet(Sheet workSheet) {
 		Row row = workSheet.createRow((short) workSheet.getLastRowNum());
 		row.createCell(0).setCellValue("Név");
@@ -453,6 +384,7 @@ public class ExcelImporter implements Runnable {
 
 	public void run() {
 		try {
+
 			processWorkbooks(this.dir);
 			this.startCalc.setEnabled(true);
 		} catch (IOException e) {
