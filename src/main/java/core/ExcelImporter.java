@@ -165,6 +165,11 @@ public class ExcelImporter implements Runnable {
 
 		this.resultLabel = new JLabel("");
 
+		// List<String> comboValues = new ArrayList<String>();
+		// for (ProcessMode pm : ProcessMode.values()) {
+		// comboValues.add(pm.getName());
+		// }
+
 		this.modeCombo = new JComboBox<ProcessMode>(ProcessMode.values());
 
 		this.frame.add(this.label);
@@ -211,6 +216,7 @@ public class ExcelImporter implements Runnable {
 						case EJSZAKAIESMUSZAKPOTLEK:
 							new NightAndWorkProcessor(calculationMonth).processWorkbook(child.getPath(), workSheet);
 						}
+						logger.log(Level.INFO, "Successfully processed " + child.toString());
 
 					} catch (Exception e) {
 						finalMessage
@@ -240,7 +246,7 @@ public class ExcelImporter implements Runnable {
 	}
 
 	public void processWorkbook(String fileName, Sheet workSheet) throws Exception {
-		logger.log(Level.INFO, "Started processing " + fileName);
+		logger.log(Level.INFO, "\nStarted processing " + fileName);
 
 		List<Person> people = new LinkedList<Person>();
 
@@ -378,8 +384,17 @@ public class ExcelImporter implements Runnable {
 	public static void addHeaderToSheet(Sheet workSheet) {
 		Row row = workSheet.createRow((short) workSheet.getLastRowNum());
 		row.createCell(0).setCellValue("Név");
-		row.createCell(1).setCellValue("Óraszám");
-		row.createCell(2).setCellValue("Bérpótlék (HUF)");
+		row.createCell(1).setCellValue("Műszakpótlék óraszám");
+		row.createCell(2).setCellValue("Műszakpótlék (HUF)");
+
+		row.createCell(4).setCellValue("Műszakpótlék DHL óraszám");
+		row.createCell(5).setCellValue("Műszakpótlék DHL (HUF)");
+
+		row.createCell(7).setCellValue("Éjszakai pótlék óraszám");
+		row.createCell(8).setCellValue("Éjszakai pótlék (HUF)");
+
+		row.createCell(10).setCellValue("Éjszakai pótlék DHL óraszám");
+		row.createCell(11).setCellValue("Éjszakai pótlék DHL (HUF)");
 	}
 
 	public void run() {

@@ -31,10 +31,10 @@ public class NightAndWorkProcessor {
 		public static final int nameY = 1;
 	}
 
-	private static Logger logger = Logger.getLogger("NightAndWorkProcessor");
+	private static Logger logger = Logger.getLogger("ExcelImporter");
 
 	public void processWorkbook(String fileName, Sheet workSheet) throws Exception {
-		logger.log(Level.INFO, "Started processing " + fileName);
+		logger.log(Level.INFO, "\nStarted processing " + fileName);
 
 		NightPerson nightPerson = null;
 
@@ -79,11 +79,17 @@ public class NightAndWorkProcessor {
 		Row row = workSheet.createRow((short) (workSheet.getLastRowNum() + 1));
 
 		row.createCell(0).setCellValue(nightPerson.getName());
-		row.createCell(1).setCellValue(nightPerson.getBonusHours());
-		row.createCell(2).setCellValue(nightPerson.getBonus());
+		row.createCell(1).setCellValue(nightPerson.getWorkBonuses().getWorkExtra().getBonusHours());
+		// row.createCell(2).setCellValue(nightPerson.getWorkBonuses().getWorkExtra().getBonus());
 
-		row.createCell(4).setCellValue(nightPerson.getDhlBonusHours());
-		row.createCell(5).setCellValue(nightPerson.getDhlBonus());
+		row.createCell(4).setCellValue(nightPerson.getWorkBonuses().getDhlExtra().getBonusHours());
+		row.createCell(5).setCellValue(nightPerson.getWorkBonuses().getDhlExtra().getBonus());
+
+		row.createCell(7).setCellValue(nightPerson.getNightlyBonuses().getWorkExtra().getBonusHours());
+		// row.createCell(8).setCellValue(nightPerson.getNightlyBonuses().getWorkExtra().getBonus());
+
+		row.createCell(10).setCellValue(nightPerson.getNightlyBonuses().getDhlExtra().getBonusHours());
+		row.createCell(11).setCellValue(nightPerson.getNightlyBonuses().getDhlExtra().getBonus());
 		// }
 		logger.log(Level.INFO, "Finished processing " + fileName);
 	}
@@ -152,7 +158,9 @@ public class NightAndWorkProcessor {
 				newDay.addWorkTime(getDatesFromString(startHour, endHour, WorkType.RAKODAS));
 			}
 
-			person.addNightWorkedDay(newDay);
+			if (!newDay.getWorkTimes().isEmpty()) {
+				person.addNightWorkedDay(newDay);
+			}
 			row++;
 			try {
 				day = (int) mainSheet.getRow(row).getCell(0).getNumericCellValue();

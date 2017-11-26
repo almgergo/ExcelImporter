@@ -1,49 +1,95 @@
 package model;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class NightPerson extends Person {
 	public static final double DHL_RATE = 420;
-	public static final double DHL_NIGHT_RATE = 420;
+	public static final double DHL_NIGHT_RATE = 210;
 
-	private double bonus;
-	private double bonusHours = 0;
-	private long bonusMinutes = 0;
+	protected ExtraContainer workBonuses;
+	protected ExtraContainer nightlyBonuses;
+	// private double bonus;
+	// private double bonusHours = 0;
+	// private long bonusMinutes = 0;
+	//
+	// private double dhlBonus;
+	// private double dhlBonusHours = 0;
+	// private long dhlBonusMinutes = 0;
 
-	private double dhlBonus;
-	private double dhlBonusHours = 0;
-	private long dhlBonusMinutes = 0;
+	protected boolean eligibleForNightlyBonus;
 
 	protected List<NightWorkedDay> nightWorkedDays;
 
 	public NightPerson(String name, int col) {
 		super(name, col);
 		nightWorkedDays = new ArrayList<NightWorkedDay>();
+		workBonuses = new ExtraContainer();
+		nightlyBonuses = new ExtraContainer();
+		// nightlyBonuses = new ArrayList<Extra>();
+		// nightlyBonuses.add(new Extra(WorkType.RAKODAS));
+		// nightlyBonuses.add(new Extra(WorkType.DHL));
+
+		// workBonuses = new ArrayList<Extra>();
+		// workBonuses.add(new Extra(WorkType.RAKODAS));
+		// workBonuses.add(new Extra(WorkType.DHL));
 	}
 
 	@Override
 	public void countBonusHours() throws Exception {
 		if (isEligible()) {
-			for (NightWorkedDay nwd : getNigthWorkedDays()) {
-				BonusMinutes bonusMinutesContainer = nwd.getExtendedBonusMinutes();
-				// long wdDhlBonusMinutes = nwd.getDhlBonusMinutes();
-				bonusMinutes += bonusMinutesContainer.getStorageBonus();
-				dhlBonusMinutes += bonusMinutesContainer.getDhlBonus();
-				System.out.println(nwd.getDay() + " day has " + bonusMinutes + " STORAGE bonus minutes, that is "
-						+ 1.0 * bonusMinutes / 60 + " bonus hours. " + nwd.getTimes());
-				System.out.println(nwd.getDay() + " day has " + dhlBonusMinutes + " DHL bonus minutes, that is "
-						+ 1.0 * dhlBonusMinutes / 60 + " bonus hours. " + nwd.getTimes());
-			}
-			bonusHours = 1.0 * bonusMinutes / 60;
-			bonus = Math.round(bonusHours * RATE);
+			for (NightWorkedDay nwd : getNightWorkedDays()) {
 
-			dhlBonusHours = 1.0 * dhlBonusMinutes / 60;
-			dhlBonus = Math.round(dhlBonusHours * DHL_RATE);
+				workBonuses.addExtraMinutes(
+						nwd.getExtendedBonusMinutes(NightWorkedDay.sixMorning.get(Calendar.HOUR_OF_DAY),
+								NightWorkedDay.sixEvening.get(Calendar.HOUR_OF_DAY)));
+
+				System.out.println(nwd.getDay() + " day has " + workBonuses.getWorkExtra().getBonusMinutes()
+						+ " STORAGE bonus minutes, that is " + 1.0 * workBonuses.getWorkExtra().getBonusMinutes() / 60
+						+ " bonus hours. " + nwd.getTimes());
+				System.out.println(nwd.getDay() + " day has " + workBonuses.getDhlExtra().getBonusMinutes()
+						+ " DHL bonus	 minutes, that is " + 1.0 * workBonuses.getDhlExtra().getBonusMinutes() / 60
+						+ " bonus hours. " + nwd.getTimes());
+			}
+			workBonuses.getWorkExtra().calculateBonus(RATE);
+			workBonuses.getDhlExtra().calculateBonus(DHL_RATE);
+
+		} else {
+			for (NightWorkedDay nwd : getNightWorkedDays()) {
+				if (isEligibleForNightlyBonus(nwd)) {
+					nightlyBonuses.addExtraMinutes(
+							nwd.getExtendedBonusMinutes(NightWorkedDay.sixMorning.get(Calendar.HOUR_OF_DAY),
+									NightWorkedDay.tenEvening.get(Calendar.HOUR_OF_DAY)));
+					System.out.println(nwd.getDay() + " day has " + workBonuses.getWorkExtra().getBonusMinutes()
+							+ " STORAGE bonus minutes, that is "
+							+ 1.0 * workBonuses.getWorkExtra().getBonusMinutes() / 60 + " bonus hours. "
+							+ nwd.getTimes());
+					System.out.println(nwd.getDay() + " day has " + workBonuses.getDhlExtra().getBonusMinutes()
+							+ " DHL bonus	 minutes, that is " + 1.0 * workBonuses.getDhlExtra().getBonusMinutes() / 60
+							+ " bonus hours. " + nwd.getTimes());
+				}
+			}
+			nightlyBonuses.getWorkExtra().calculateBonus(RATE);
+			nightlyBonuses.getDhlExtra().calculateBonus(DHL_NIGHT_RATE);
 		}
 	}
 
-	public List<NightWorkedDay> getNigthWorkedDays() {
+	public boolean isEligibleForNightlyBonus(NightWorkedDay nwd) throws Exception {
+		boolean eligible = false;
+
+		WorkTime wt = nwd.getTotalWorkTime();
+		// WorkTime wt = new WorkTime(wd.getStartTime(), wd.getEndTime(), null);
+		long bonusMinutes = nwd.getBonusMinutes(wt, NightWorkedDay.sixMorning.get(Calendar.HOUR_OF_DAY),
+				NightWorkedDay.tenEvening.get(Calendar.HOUR_OF_DAY));
+		if (bonusMinutes > 60) {
+			eligible = true;
+		}
+
+		return eligible;
+	}
+
+	public List<NightWorkedDay> getNightWorkedDays() {
 		return nightWorkedDays;
 	}
 
@@ -83,20 +129,36 @@ public class NightPerson extends Person {
 		this.bonusHours = bonusHours;
 	}
 
-	public double getDhlBonus() {
-		return dhlBonus;
+	public ExtraContainer getWorkBonuses() {
+		return workBonuses;
 	}
 
-	public void setDhlBonus(double dhlBonus) {
-		this.dhlBonus = dhlBonus;
+	public void setWorkBonuses(ExtraContainer workBonuses) {
+		this.workBonuses = workBonuses;
 	}
 
-	public double getDhlBonusHours() {
-		return dhlBonusHours;
+	public ExtraContainer getNightlyBonuses() {
+		return nightlyBonuses;
 	}
 
-	public void setDhlBonusHours(double dhlBonusHours) {
-		this.dhlBonusHours = dhlBonusHours;
+	public void setNightlyBonuses(ExtraContainer nightlyBonuses) {
+		this.nightlyBonuses = nightlyBonuses;
 	}
+
+	// public double getDhlBonus() {
+	// return dhlBonus;
+	// }
+	//
+	// public void setDhlBonus(double dhlBonus) {
+	// this.dhlBonus = dhlBonus;
+	// }
+	//
+	// public double getDhlBonusHours() {
+	// return dhlBonusHours;
+	// }
+	//
+	// public void setDhlBonusHours(double dhlBonusHours) {
+	// this.dhlBonusHours = dhlBonusHours;
+	// }
 
 }

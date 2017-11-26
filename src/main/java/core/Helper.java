@@ -43,7 +43,10 @@ public class Helper {
 			parts = hour.split("[,]");
 		}
 		if (1 == parts.length) {
-			parts = hour.split(" ");
+			parts = hour.split("[_]");
+		}
+		if (1 == parts.length) {
+			parts = hour.split("[ ]");
 		}
 		if (parts.length > 1) {
 			return new TimeParts(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));

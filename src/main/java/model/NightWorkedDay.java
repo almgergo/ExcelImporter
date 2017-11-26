@@ -10,21 +10,31 @@ public class NightWorkedDay extends WorkedDay {
 
 	protected List<WorkTime> workTimes;
 
+	protected static Calendar tenEvening;
+	{
+		tenEvening = Calendar.getInstance();
+		tenEvening.set(Calendar.HOUR_OF_DAY, 22);
+		tenEvening.set(Calendar.MINUTE, 0);
+		tenEvening.set(Calendar.SECOND, 0);
+		tenEvening.set(Calendar.MILLISECOND, 0);
+	}
+
 	public NightWorkedDay() {
 		this.workTimes = new ArrayList<WorkTime>();
 	}
 
-	public BonusMinutes getExtendedBonusMinutes() throws Exception {
+	public BonusMinutes getExtendedBonusMinutes(final double morningHour, final double eveningHour) throws Exception {
 		long storageBonusMinutes = 0;
 		long dhlBonusMinutes = 0;
 
 		for (WorkTime wt : workTimes) {
 			switch (wt.workType) {
 			case RAKODAS:
-				storageBonusMinutes += getBonusMinutes(wt);
+				storageBonusMinutes += getBonusMinutes(wt, morningHour, eveningHour);
 				break;
 			case DHL:
-				dhlBonusMinutes += getBonusMinutes(wt);
+				dhlBonusMinutes += getBonusMinutes(wt, sixMorning.get(Calendar.HOUR_OF_DAY),
+						sixEvening.get(Calendar.HOUR_OF_DAY));
 				break;
 			default:
 				break;
@@ -33,7 +43,7 @@ public class NightWorkedDay extends WorkedDay {
 		return new BonusMinutes(storageBonusMinutes, dhlBonusMinutes);
 	}
 
-	public long getBonusMinutes(WorkTime wt) throws Exception {
+	public long getBonusMinutes(WorkTime wt, final double morningHour, final double eveningHour) throws Exception {
 		Calendar stime = Calendar.getInstance();
 		stime.setTime(wt.getStartDate());
 		Calendar etime = Calendar.getInstance();
@@ -43,8 +53,8 @@ public class NightWorkedDay extends WorkedDay {
 		if (diff < 0)
 			throw new Exception("End time is before start time");
 
-		final double morningHour = sixMorning.get(Calendar.HOUR_OF_DAY);
-		final double eveningHour = sixEvening.get(Calendar.HOUR_OF_DAY);
+		// final double morningHour = sixMorning.get(Calendar.HOUR_OF_DAY);
+		// final double eveningHour = sixEvening.get(Calendar.HOUR_OF_DAY);
 
 		Calendar normalHourCount = Calendar.getInstance();
 		truncCalendar(normalHourCount);
@@ -85,18 +95,35 @@ public class NightWorkedDay extends WorkedDay {
 		Date start = workTimes.get(0).getStartDate();
 		Date end = workTimes.get(workTimes.size() - 1).getEndDate();
 
-		// Calendar startTime = Calendar.getInstance();
-		// startTime.setTime(start);
-		// Calendar endTime = Calendar.getInstance();
-		// endTime.setTime(end);
-		//
-		// if (startTime.get(Calendar.HOUR) >= endTime.get(Calendar.HOUR)) {
-		// endTime.add(5, 1);
-		// }
-		// setCalendarTime(startTime, startParts, 18);
-		// setCalendarTime(endTime, endParts, 6);
+		Calendar startCal = Calendar.getInstance();
+		startCal.setTime(start);
+		Calendar endCal = Calendar.getInstance();
+		endCal.setTime(end);
 
-		return new WorkedDay(start, end);
+		if (startCal.get(Calendar.HOUR_OF_DAY) >= endCal.get(Calendar.HOUR_OF_DAY)) {
+			endCal.add(Calendar.DAY_OF_MONTH, 1);
+		}
+
+		return new WorkedDay(startCal.getTime(), endCal.getTime());
+	}
+
+	public WorkTime getTotalWorkTime() {
+		if (workTimes.isEmpty()) {
+			return null;
+		}
+		Date start = workTimes.get(0).getStartDate();
+		Date end = workTimes.get(workTimes.size() - 1).getEndDate();
+
+		Calendar startCal = Calendar.getInstance();
+		startCal.setTime(start);
+		Calendar endCal = Calendar.getInstance();
+		endCal.setTime(end);
+
+		if (startCal.get(Calendar.HOUR_OF_DAY) >= endCal.get(Calendar.HOUR_OF_DAY)) {
+			endCal.add(Calendar.DAY_OF_MONTH, 1);
+		}
+
+		return new WorkTime(startCal.getTime(), endCal.getTime(), null);
 	}
 
 	public List<WorkTime> getWorkTimes() {
