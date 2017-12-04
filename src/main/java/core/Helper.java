@@ -8,58 +8,64 @@ import model.TimeParts;
 
 public class Helper {
 
-	public static String readUnkownCell(XSSFSheet mainSheet, int row, int col) throws Exception {
-		try {
-			Calendar c = Calendar.getInstance();
-			c.setTime(mainSheet.getRow(row).getCell(col).getDateCellValue());
-			return c.get(Calendar.HOUR_OF_DAY) + ":" + c.get(Calendar.MINUTE);
-		} catch (Exception e) {
-			try {
-				return Double.toString(mainSheet.getRow(row).getCell(col).getNumericCellValue());
-			} catch (Exception e1) {
-				try {
-					return mainSheet.getRow(row).getCell(col).getStringCellValue();
-				} catch (Exception e2) {
-					throw new Exception("Cell was not numeric or String");
-				}
-			}
-		}
-	}
+    public static String readUnkownCell( final XSSFSheet mainSheet, final int row, final int col ) throws Exception {
+        int cellType = mainSheet.getRow(row).getCell(col).getCellType();
+        switch ( cellType ) {
+            case 0:
+                break;
+        }
 
-	public static void trunk(Calendar time) {
-		time.set(11, 0);
-		time.set(12, 0);
-		time.set(13, 0);
-		time.set(14, 0);
-	}
+        try {
+            return mainSheet.getRow(row).getCell(col).getStringCellValue();
+        } catch (Exception e) {
+            try {
+                Calendar c = Calendar.getInstance();
+                c.setTime(mainSheet.getRow(row).getCell(col).getDateCellValue());
+                return c.get(Calendar.HOUR_OF_DAY) + ":" + c.get(Calendar.MINUTE);
+            } catch (Exception e1) {
+                try {
+                    return Double.toString(mainSheet.getRow(row).getCell(col).getNumericCellValue());
+                } catch (Exception e2) {
+                    throw new Exception("Cell was not numeric or string or date");
+                }
+            }
+        }
+    }
 
-	public static TimeParts getTimeParts(String hour) {
-		hour = hour.trim();
-		String[] parts = hour.split("[.]");
-		if (1 == parts.length) {
-			parts = hour.split("[:]");
-		}
-		if (1 == parts.length) {
-			parts = hour.split("[,]");
-		}
-		if (1 == parts.length) {
-			parts = hour.split("[_]");
-		}
-		if (1 == parts.length) {
-			parts = hour.split("[ ]");
-		}
-		if (parts.length > 1) {
-			return new TimeParts(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
-		}
-		return new TimeParts(Integer.parseInt(parts[0]), 0);
-	}
+    public static void trunk( final Calendar time ) {
+        time.set(11, 0);
+        time.set(12, 0);
+        time.set(13, 0);
+        time.set(14, 0);
+    }
 
-	public static void setCalendarTime(Calendar time, TimeParts parts, int hourToSetTo) {
-		int hours = parts.getHours();
-		int minutes = parts.getMinutes();
+    public static TimeParts getTimeParts( String hour ) {
+        hour = hour.trim();
+        String[] parts = hour.split("[.]");
+        if ( 1 == parts.length ) {
+            parts = hour.split("[:]");
+        }
+        if ( 1 == parts.length ) {
+            parts = hour.split("[,]");
+        }
+        if ( 1 == parts.length ) {
+            parts = hour.split("[_]");
+        }
+        if ( 1 == parts.length ) {
+            parts = hour.split("[ ]");
+        }
+        if ( parts.length > 1 ) {
+            return new TimeParts(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
+        }
+        return new TimeParts(Integer.parseInt(parts[0]), 0);
+    }
 
-		time.set(Calendar.HOUR_OF_DAY, hours);
-		time.set(Calendar.MINUTE, minutes);
-	}
+    public static void setCalendarTime( final Calendar time, final TimeParts parts, final int hourToSetTo ) {
+        int hours = parts.getHours();
+        int minutes = parts.getMinutes();
+
+        time.set(Calendar.HOUR_OF_DAY, hours);
+        time.set(Calendar.MINUTE, minutes);
+    }
 
 }
