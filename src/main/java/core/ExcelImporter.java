@@ -53,6 +53,15 @@ public class ExcelImporter implements Runnable {
 	private static final int FIRST_HOUR = 18;
 	private static final int FINAL_HOUR = 6;
 
+	private static final int Y_START = 1;
+	private static final int X_START = 1;
+	private static final int X_RES = 7;
+	private static final int Y_RES = 41;
+
+	private static final int ROW_SHIFT = 4;
+
+	private static final Object SHEET_TO_PROCESS = "jelenlétik";
+
 	private JButton startCalc = new JButton("Adatok feldolgozása");
 	private JButton selectDir = new JButton("Mappa kiválasztása");
 	private JButton selectOutDir = new JButton("Kimeneti mappa kiválasztása");
@@ -215,6 +224,9 @@ public class ExcelImporter implements Runnable {
 							break;
 						case EJSZAKAIESMUSZAKPOTLEK:
 							new NightAndWorkProcessor(calculationMonth).processWorkbook(child.getPath(), workSheet);
+							break;
+						default:
+							break;
 						}
 						logger.log(Level.INFO, "Successfully processed " + child.toString());
 
@@ -259,20 +271,43 @@ public class ExcelImporter implements Runnable {
 		for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
 			String sheetName = workbook.getSheetName(i);
 			if (sheetName != null && !"".equals(sheetName) && !"0".equals(sheetName)) {
+				// if (sheetName != null && SHEET_NAME.equals(sheetName)) {
 				sheets.add(workbook.getSheet(sheetName));
 			}
 		}
 
-		// XSSFSheet mainSheet = workbook.getSheet("Munka1");
-
-		// Person p = new Person("", 0);
 		for (XSSFSheet sheet : sheets) {
-			try {
-				Person p = loadPeople(sheet, people);
-				loadWorkedDays(sheet, p);
-			} catch (final Exception e) {
-				logger.log(Level.SEVERE,
-						"Error while loading sheet: " + sheet.getSheetName() + " errormessage: " + e.getMessage(), e);
+			if (SHEET_TO_PROCESS.equals(sheet.getSheetName())) {
+				try {
+
+					int y = Y_START;
+
+					boolean ymore = true;
+					boolean xmore = true;
+
+					int x = X_START;
+					while (xmore || ymore) {
+						Person person = new Person();
+						if (loadPeople(person, sheet, people, x, y)) {
+							loadWorkedDays(sheet, person);
+							xmore = true;
+							x += X_RES;
+						} else if (xmore) {
+							xmore = false;
+							y += Y_RES;
+							x = X_START;
+						} else if (ymore) {
+							ymore = false;
+						}
+						int i = 10;
+					}
+
+				} catch (final Exception e) {
+					logger.log(Level.SEVERE, "Error while processing sheet: " + sheet.getSheetName() + " errormessage: "
+							+ e.getMessage(), e);
+				}
+			} else {
+				logger.log(Level.INFO, "not processing sheet: " + sheet.getSheetName());
 			}
 		}
 
@@ -303,22 +338,27 @@ public class ExcelImporter implements Runnable {
 		}
 	}
 
-	protected Person loadPeople(XSSFSheet mainSheet, List<Person> people) {
-		// for (NameCoordinate nc : this.nameCoords) {
-		int row = this.nameCoords.get(0).getRow();
-		int col = this.nameCoords.get(0).getCol();
+	protected boolean loadPeople(Person person, final XSSFSheet mainSheet, List<Person> people, final int col,
+			final int row) {
+		String name = null;
+		try {
+			name = mainSheet.getRow(row).getCell(col).getStringCellValue();
+		} catch (final NullPointerException e) {
+			return false;
+		}
+		if (name != null && !"".equals(name)) {
+			person.setName(name);
+			person.setColumn(col);
+			person.setRow(row);
 
-		String name = mainSheet.getRow(row).getCell(col).getStringCellValue();
-		Person person = new Person(name, col);
-
-		people.add(person);
-		return person;
-		// }
-
+			people.add(person);
+			return true;
+		}
+		return false;
 	}
 
 	protected void loadWorkedDays(XSSFSheet mainSheet, Person person) throws Exception {
-		int row = 5;
+		int row = person.getRow() + ROW_SHIFT;
 		Integer day = (int) mainSheet.getRow(row).getCell(0).getNumericCellValue();
 
 		Calendar c = Calendar.getInstance();
@@ -332,10 +372,18 @@ public class ExcelImporter implements Runnable {
 			int startColumn = person.getStartColumn();
 			int endColumn = person.getEndColumn();
 
-			String startHour = Helper.readUnkownCell(mainSheet, row, startColumn);
-			String endHour = Helper.readUnkownCell(mainSheet, row, endColumn);
-			if ((!"0.0".equals(startHour)) || (!"0.0".equals(endHour))) {
-				WorkedDay newDay = getDatesFromString(startHour, endHour);
+			String startHour = Helper.readUnkownCellDebrecen(mainSheet, row, startColumn);
+			String endHour = Helper.readUnkownCellDebrecen(mainSheet, row, endColumn);
+			if ((!"0.0".equals(startHour) || !"0.0".equals(endHour))
+					&& (!"".equals(startHour) && !"".equals(endHour))) {
+
+				WorkedDay newDay = null;
+				try {
+					newDay = getDatesFromString(startHour, endHour);
+				} catch (final NumberFormatException e) {
+					logger.log(Level.SEVERE, "startHour: " + startHour + ", endHour: " + endHour + ", at row: " + row
+							+ ", col: " + startColumn, e);
+				}
 				newDay.setDay(date);
 				person.addWorkedDay(newDay);
 			}
@@ -355,13 +403,12 @@ public class ExcelImporter implements Runnable {
 		}
 	}
 
-	public WorkedDay getDatesFromString(String startHour, String endHour) {
+	public WorkedDay getDatesFromString(String startHour, String endHour) throws NumberFormatException {
 		Calendar startTime = Calendar.getInstance();
 		Calendar endTime = Calendar.getInstance();
 
 		Helper.trunk(startTime);
 		Helper.trunk(endTime);
-
 		TimeParts startParts = Helper.getTimeParts(startHour);
 		TimeParts endParts = Helper.getTimeParts(endHour);
 		if (startParts.getHours() >= endParts.getHours()) {

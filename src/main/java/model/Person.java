@@ -16,10 +16,21 @@ public class Person {
 
 	protected boolean isEligible;
 	protected int column;
+	protected int row;
+
+	public Person() {
+	}
 
 	public Person(final String name, final int col) {
 		this.name = name;
 		this.column = col;
+		this.row = 0;
+	}
+
+	public Person(final String name, final int col, final int row) {
+		this.name = name;
+		this.column = col;
+		this.row = row;
 	}
 
 	public void countBonusHours() throws Exception {
@@ -120,6 +131,18 @@ public class Person {
 	public String printPersonData() {
 		return name + "\t" + bonusHours + "\t" + Math.round(bonusHours * RATE);
 
+	}
+
+	public int getRow() {
+		return row;
+	}
+
+	public void setRow(int row) {
+		this.row = row;
+	}
+
+	public void setName(String name) {
+		this.name = name;
 	}
 
 }
