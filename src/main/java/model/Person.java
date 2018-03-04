@@ -64,7 +64,7 @@ public class Person {
 			if (wd.getDifferentStarts() < limit) {
 				isEligible = false;
 			}
-			if (wd.getFourHourDifferenceIsMet() >= FOUR_HOUR_LIMIT) {
+			if (wd.getFourHourDifferenceIsMet() >= limit) {
 				hasFourHourDifference = true;
 			}
 		}

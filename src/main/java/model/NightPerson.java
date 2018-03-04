@@ -68,7 +68,7 @@ public class NightPerson extends Person {
 		// WorkTime wt = new WorkTime(wd.getStartTime(), wd.getEndTime(), null);
 		long bonusMinutes = nwd.getBonusMinutes(wt, NightWorkedDay.sixMorning.get(Calendar.HOUR_OF_DAY),
 				NightWorkedDay.tenEvening.get(Calendar.HOUR_OF_DAY));
-		if (bonusMinutes > 60) {
+		if (bonusMinutes > 0) {
 			eligible = true;
 		}
 
