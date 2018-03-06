@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Person {
-	public static final double RATE = 277.8;
+	public static final double RATE = 1038 * 0.3;
 
 	protected static final int FOUR_HOUR_LIMIT = 1;
 
